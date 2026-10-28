@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createBooking } from '../api/bookings';
+import { formatINR } from '../utils/formatCurrency';
 
 // --- Utility helpers ---
 const getDiffNights = (checkIn, checkOut) => {
@@ -10,7 +11,7 @@ const getDiffNights = (checkIn, checkOut) => {
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  return new Date(dateStr).toLocaleDateString('en-IN', {
     weekday: 'short',
     year: 'numeric',
     month: 'short',
@@ -58,7 +59,7 @@ const ReviewStep = ({ room, checkIn, checkOut, guests, nights, total, onBack, on
     <div className="bg-light rounded-3 p-3 mb-4">
       <div className="d-flex justify-content-between small text-muted mb-1">
         <span><i className="bi bi-moon-stars me-1"></i>{nights} night{nights !== 1 ? 's' : ''}</span>
-        <span>${room.price} × {nights}</span>
+        <span>{formatINR(room.price)} × {nights}</span>
       </div>
       <div className="d-flex justify-content-between small text-muted mb-1">
         <span><i className="bi bi-people me-1"></i>Guests</span>
@@ -67,7 +68,7 @@ const ReviewStep = ({ room, checkIn, checkOut, guests, nights, total, onBack, on
       <hr className="my-2" />
       <div className="d-flex justify-content-between fw-bold">
         <span>Total</span>
-        <span className="fs-5">${total.toLocaleString()}</span>
+        <span className="fs-5">{formatINR(total)}</span>
       </div>
       <small className="text-muted d-block mt-1">
         <i className="bi bi-info-circle me-1"></i>Payment collected at check-in
@@ -140,7 +141,7 @@ const ConfirmationStep = ({ booking, onClose }) => (
       </div>
       <div className="d-flex justify-content-between small">
         <span className="text-muted">Total</span>
-        <strong>${booking.totalAmount?.toLocaleString()}</strong>
+        <strong>{formatINR(booking.totalAmount)}</strong>
       </div>
     </div>
 
@@ -321,8 +322,8 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', initial
 
                 {nights > 0 && (
                   <div className="d-flex justify-content-between align-items-center py-2 px-3 rounded-3 bg-light border mb-3 small">
-                    <span className="text-muted">${room.price} × {nights} night{nights !== 1 ? 's' : ''}</span>
-                    <span className="fw-bold fs-6">${total.toLocaleString()}</span>
+                    <span className="text-muted">{formatINR(room.price)} × {nights} night{nights !== 1 ? 's' : ''}</span>
+                    <span className="fw-bold fs-6">{formatINR(total)}</span>
                   </div>
                 )}
 

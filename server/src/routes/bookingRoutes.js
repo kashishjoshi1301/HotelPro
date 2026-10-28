@@ -86,6 +86,12 @@ router.post('/', authenticateUser, async (req, res) => {
       return res.status(400).json({ error: `Room is currently ${room.status} and cannot be reserved.` });
     }
 
+    // In replica set transaction, acquire a transactional write lock on the room document
+    // to prevent concurrent write-skew / phantom overlapping bookings
+    if (session) {
+      await Room.findByIdAndUpdate(roomId, { $inc: { __v: 1 } }, { session });
+    }
+
     // Validate Guest Count against Room Capacity
     const parsedGuests = parseInt(guests, 10);
     if (isNaN(parsedGuests) || parsedGuests < 1) {
@@ -249,6 +255,10 @@ router.patch('/:id/cancel', authenticateUser, async (req, res) => {
 
     booking.bookingStatus = 'cancelled';
     await booking.save();
+
+    // Ensure room is available upon cancellation
+    await Room.findByIdAndUpdate(booking.room, { status: 'available' });
+
     await booking.populate('room', 'title roomNumber category image price');
 
     return res.status(200).json({
@@ -315,6 +325,16 @@ router.patch('/:id/status', authenticateUser, authorizeRoles('staff', 'admin'), 
 
     booking.bookingStatus = status;
     await booking.save();
+
+    // Synchronize room status with booking operation
+    if (status === 'checked-in') {
+      await Room.findByIdAndUpdate(booking.room, { status: 'occupied' });
+    } else if (status === 'checked-out') {
+      await Room.findByIdAndUpdate(booking.room, { status: 'cleaning' });
+    } else if (status === 'cancelled') {
+      await Room.findByIdAndUpdate(booking.room, { status: 'available' });
+    }
+
     await booking.populate('room', 'title roomNumber category price');
     await booking.populate('user', 'name email');
 

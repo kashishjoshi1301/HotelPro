@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getStaffDashboard } from '../api/dashboard';
 import { updateBookingStatus } from '../api/bookings';
+import { updateRoomStatus } from '../api/rooms';
 import { formatDate } from './BookingModal';
 
 const StaffDashboard = ({ isOpen, onClose }) => {
-  const [data, setData] = useState({ arrivals: [], departures: [], checkedIn: [], counts: {} });
+  const [data, setData] = useState({ arrivals: [], departures: [], checkedIn: [], cleaning: [], counts: {} });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [cleaningRoomId, setCleaningRoomId] = useState(null);
   const [actionError, setActionError] = useState('');
 
   const load = () => {
@@ -33,6 +35,19 @@ const StaffDashboard = ({ isOpen, onClose }) => {
       setActionError(e.response?.data?.error || 'Status update failed.');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleRoomCleaned = async (roomId) => {
+    setCleaningRoomId(roomId);
+    setActionError('');
+    try {
+      await updateRoomStatus(roomId, 'available');
+      load();
+    } catch (e) {
+      setActionError(e.response?.data?.error || 'Failed to mark room as cleaned.');
+    } finally {
+      setCleaningRoomId(null);
     }
   };
 
@@ -84,7 +99,7 @@ const StaffDashboard = ({ isOpen, onClose }) => {
               <h5 className="modal-title font-serif fw-bold mb-0">
                 <i className="bi bi-clipboard2-check brand-accent me-2"></i>Staff Dashboard
               </h5>
-              <p className="text-white-50 small mb-0">Today's operations overview</p>
+              <p className="text-white-50 small mb-0">Daily operations, arrivals, departures & room turnover</p>
             </div>
             <div className="d-flex gap-2 align-items-center">
               <button onClick={load} className="btn btn-outline-light btn-sm px-2 py-1" title="Refresh">
@@ -118,12 +133,13 @@ const StaffDashboard = ({ isOpen, onClose }) => {
                   {[
                     { label: 'Arrivals Today', count: data.counts.arrivals || 0, icon: 'bi-box-arrow-in-right', color: 'success' },
                     { label: 'Departures Today', count: data.counts.departures || 0, icon: 'bi-box-arrow-right', color: 'warning' },
-                    { label: 'Currently Checked In', count: data.counts.checkedIn || 0, icon: 'bi-door-open', color: 'info' }
+                    { label: 'Currently Checked In', count: data.counts.checkedIn || 0, icon: 'bi-door-open', color: 'info' },
+                    { label: 'Rooms Cleaning', count: data.counts.cleaning || 0, icon: 'bi-stars', color: 'secondary' }
                   ].map(({ label, count, icon, color }) => (
-                    <div key={label} className="col-12 col-md-4">
+                    <div key={label} className="col-6 col-md-3">
                       <div className="bg-white rounded-3 p-3 shadow-sm d-flex align-items-center gap-3">
                         <div className={`d-flex align-items-center justify-content-center rounded-3 bg-${color}-subtle text-${color}`}
-                          style={{ width: 48, height: 48, fontSize: '1.4rem' }}>
+                          style={{ width: 44, height: 44, fontSize: '1.3rem' }}>
                           <i className={`bi ${icon}`}></i>
                         </div>
                         <div>
@@ -204,10 +220,49 @@ const StaffDashboard = ({ isOpen, onClose }) => {
                   </div>
                 )}
 
-                {data.arrivals.length === 0 && data.departures.length === 0 && data.checkedIn.length === 0 && (
+                {/* Housekeeping / Cleaning Queue */}
+                {data.cleaning && data.cleaning.length > 0 && (
+                  <div className="bg-white rounded-3 p-4 shadow-sm">
+                    <h6 className="font-serif fw-bold mb-3 text-secondary">
+                      <i className="bi bi-stars me-2 text-warning"></i>Housekeeping & Room Turnover Queue
+                    </h6>
+                    <div className="table-responsive">
+                      <table className="table table-hover align-middle small mb-0">
+                        <thead className="table-light">
+                          <tr><th>Room Number</th><th>Suite Title</th><th>Category</th><th>Current State</th><th>Action</th></tr>
+                        </thead>
+                        <tbody>
+                          {data.cleaning.map((r) => (
+                            <tr key={r._id}>
+                              <td className="fw-bold">No. {r.roomNumber}</td>
+                              <td>{r.title}</td>
+                              <td><span className="badge bg-secondary-subtle text-secondary">{r.category}</span></td>
+                              <td><span className="badge bg-warning-subtle text-warning">Cleaning in progress</span></td>
+                              <td>
+                                <button
+                                  className="btn btn-sm btn-outline-success py-1 px-2"
+                                  style={{ fontSize: '0.72rem' }}
+                                  onClick={() => handleRoomCleaned(r._id)}
+                                  disabled={cleaningRoomId === r._id}
+                                >
+                                  {cleaningRoomId === r._id
+                                    ? <span className="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                    : <><i className="bi bi-check2-circle me-1"></i>Mark Cleaned & Available</>
+                                  }
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {data.arrivals.length === 0 && data.departures.length === 0 && data.checkedIn.length === 0 && (!data.cleaning || data.cleaning.length === 0) && (
                   <div className="text-center py-4 text-muted">
                     <i className="bi bi-calendar-check fs-1 d-block mb-2"></i>
-                    <p className="small">No activity today.</p>
+                    <p className="small">No pending operations or arrivals today.</p>
                   </div>
                 )}
               </div>

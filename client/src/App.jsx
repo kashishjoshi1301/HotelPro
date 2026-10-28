@@ -14,6 +14,7 @@ import AdminDashboard from './components/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { mockRooms } from './data/mockRooms';
 import api from './api/axios';
+import { formatINR } from './utils/formatCurrency';
 
 function MainApp() {
   const [serverHealth, setServerHealth] = useState(null);
@@ -209,7 +210,7 @@ function MainApp() {
                       {selectedRoom.category}
                     </span>
                     <div className="text-end">
-                      <span className="fs-3 fw-bold text-dark">${selectedRoom.price}</span>
+                      <span className="fs-3 fw-bold text-dark">{formatINR(selectedRoom.price)}</span>
                       <span className="text-muted small"> / night</span>
                     </div>
                   </div>

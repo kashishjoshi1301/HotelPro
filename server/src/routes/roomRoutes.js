@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Room from '../models/Room.js';
+import Booking from '../models/Booking.js';
 import { authenticateUser, authorizeRoles } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -67,20 +68,16 @@ router.get('/', async (req, res) => {
         return res.status(400).json({ error: 'Check-out date must be strictly after check-in date.' });
       }
 
-      // Requirement 5: Forward-compatible reservation overlap check
-      // When Phase 4 registers the Booking model, dynamically query overlapping reservations
-      if (mongoose.models.Booking) {
-        const Booking = mongoose.model('Booking');
-        const overlappingBookings = await Booking.find({
-          bookingStatus: { $in: ['confirmed', 'checked-in'] },
-          checkIn: { $lt: parsedCheckOut },
-          checkOut: { $gt: parsedCheckIn }
-        }).select('room');
+      // Exclude rooms with overlapping active reservations (confirmed or checked-in)
+      const overlappingBookings = await Booking.find({
+        bookingStatus: { $in: ['confirmed', 'checked-in'] },
+        checkIn: { $lt: parsedCheckOut },
+        checkOut: { $gt: parsedCheckIn }
+      }).select('room');
 
-        const bookedRoomIds = overlappingBookings.map((b) => b.room);
-        if (bookedRoomIds.length > 0) {
-          filter._id = { $nin: bookedRoomIds };
-        }
+      const bookedRoomIds = overlappingBookings.map((b) => b.room);
+      if (bookedRoomIds.length > 0) {
+        filter._id = { $nin: bookedRoomIds };
       }
     }
 
@@ -300,6 +297,38 @@ router.delete('/:id', authenticateUser, authorizeRoles('staff', 'admin'), async 
   } catch (error) {
     console.error('[Delete Room Error]:', error);
     return res.status(500).json({ error: 'Failed to delete room.' });
+  }
+});
+
+// PATCH /api/rooms/:id/status - Quick room status transition (Staff & Admin only)
+router.patch('/:id/status', authenticateUser, authorizeRoles('staff', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ error: 'Invalid room identifier format.' });
+    }
+
+    const validStatuses = ['available', 'occupied', 'cleaning', 'maintenance', 'inactive'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        error: `Status must be one of: ${validStatuses.join(', ')}`
+      });
+    }
+
+    const room = await Room.findByIdAndUpdate(id, { status }, { new: true, runValidators: true });
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found.' });
+    }
+
+    return res.status(200).json({
+      message: `Room status updated to '${status}'.`,
+      room
+    });
+  } catch (error) {
+    console.error('[Update Room Status Error]:', error);
+    return res.status(500).json({ error: 'Failed to update room status.' });
   }
 });
 

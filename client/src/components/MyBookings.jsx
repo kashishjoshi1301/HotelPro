@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getMyBookings, cancelBooking } from '../api/bookings';
 import { STATUS_BADGE, formatDate } from './BookingModal';
+import { formatINR } from '../utils/formatCurrency';
 
 const MyBookings = ({ isOpen, onClose }) => {
   const [bookings, setBookings] = useState([]);
@@ -134,7 +135,7 @@ const MyBookings = ({ isOpen, onClose }) => {
                               &nbsp;&bull;&nbsp;
                               <i className="bi bi-moon-stars me-1"></i>{booking.nights} night{booking.nights !== 1 ? 's' : ''}
                               &nbsp;&bull;&nbsp;
-                              <strong className="text-dark">${booking.totalAmount?.toLocaleString()}</strong>
+                              <strong className="text-dark">{formatINR(booking.totalAmount)}</strong>
                             </div>
 
                             {booking.bookingStatus === 'confirmed' && (

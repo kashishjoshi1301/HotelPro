@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "seed": "node src/seed.js",
+    "test": "node --test test/suite.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

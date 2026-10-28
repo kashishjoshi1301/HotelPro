@@ -1,5 +1,7 @@
 import React from 'react';
 
+const currentYear = new Date().getFullYear();
+
 const Footer = () => {
   return (
     <footer id="contact" className="footer-hotelpro pt-5 pb-4">
@@ -15,6 +17,17 @@ const Footer = () => {
               HotelPro represents the benchmark in luxury accommodations, intuitive guest experiences, and world-class hospitality across prime destinations.
             </p>
             <div className="d-flex gap-3">
+              <a
+                href="https://github.com/Arnav2306/HotelPro"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-sm btn-outline-secondary rounded-circle"
+                style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                aria-label="GitHub Repository"
+                title="GitHub Repository"
+              >
+                <i className="bi bi-github"></i>
+              </a>
               <a href="#home" className="btn btn-sm btn-outline-secondary rounded-circle" style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Instagram">
                 <i className="bi bi-instagram"></i>
               </a>
@@ -78,10 +91,10 @@ const Footer = () => {
                 <input
                   type="email"
                   className="form-control bg-dark border-secondary text-white"
-                  placeholder="Your email address"
-                  aria-label="Your email address"
+                  placeholder="Enter your email"
+                  aria-label="Email address"
                 />
-                <button className="btn btn-hotelpro-gold px-3" type="button">
+                <button className="btn btn-gold text-dark fw-semibold" type="button">
                   Join
                 </button>
               </div>
@@ -91,11 +104,18 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-4 mt-4 border-top border-secondary border-opacity-25 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 small text-secondary">
-          <p className="mb-0">&copy; {new Date().getFullYear()} HotelPro Resort & Management. All rights reserved.</p>
+          <p className="mb-0">&copy; {currentYear} HotelPro Resort & Management. All rights reserved.</p>
           <div className="d-flex gap-4">
+            <a
+              href="https://github.com/Arnav2306/HotelPro"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-link"
+            >
+              <i className="bi bi-github me-1"></i>GitHub Repository
+            </a>
             <a href="#privacy" className="footer-link">Privacy Policy</a>
             <a href="#terms" className="footer-link">Terms of Service</a>
-            <a href="#cookie" className="footer-link">Cookie Preferences</a>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAdminDashboard } from '../api/dashboard';
 import { formatDate } from './BookingModal';
 import { STATUS_BADGE } from './BookingModal';
+import { formatINR } from '../utils/formatCurrency';
 
 const StatCard = ({ icon, label, value, color, sub }) => (
   <div className="col-6 col-md-4 col-lg-2">
@@ -84,7 +85,7 @@ const AdminDashboard = ({ isOpen, onClose }) => {
                   <StatCard
                     icon="bi-currency-rupee"
                     label="Total Revenue"
-                    value={`₹${(data.totalRevenue || 0).toLocaleString('en-IN')}`}
+                    value={formatINR(data.totalRevenue || 0)}
                     color="warning"
                     sub="Paid bookings only"
                   />
@@ -148,7 +149,7 @@ const AdminDashboard = ({ isOpen, onClose }) => {
                               </td>
                               <td>{formatDate(b.checkIn)}</td>
                               <td>{formatDate(b.checkOut)}</td>
-                              <td className="fw-semibold">₹{b.totalAmount?.toLocaleString('en-IN')}</td>
+                              <td className="fw-semibold">{formatINR(b.totalAmount)}</td>
                               <td>
                                 <span className={`badge ${STATUS_BADGE[b.bookingStatus] || 'bg-secondary-subtle text-secondary'}`}>
                                   {b.bookingStatus}

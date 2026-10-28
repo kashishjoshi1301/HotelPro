@@ -59,7 +59,7 @@ router.get('/staff', authenticateUser, authorizeRoles('staff', 'admin'), async (
   try {
     const { start, end } = todayRange();
 
-    const [arrivals, departures, checkedIn] = await Promise.all([
+    const [arrivals, departures, checkedIn, cleaningRooms] = await Promise.all([
       Booking.find({
         bookingStatus: 'confirmed',
         checkIn: { $gte: start, $lte: end }
@@ -77,17 +77,23 @@ router.get('/staff', authenticateUser, authorizeRoles('staff', 'admin'), async (
       Booking.find({ bookingStatus: 'checked-in' })
         .populate('room', 'title roomNumber category')
         .populate('user', 'name email')
-        .sort({ checkIn: 1 })
+        .sort({ checkIn: 1 }),
+
+      Room.find({ status: 'cleaning' })
+        .select('roomNumber title category status bed')
+        .sort({ roomNumber: 1 })
     ]);
 
     return res.status(200).json({
       arrivals,
       departures,
       checkedIn,
+      cleaning: cleaningRooms,
       counts: {
         arrivals: arrivals.length,
         departures: departures.length,
-        checkedIn: checkedIn.length
+        checkedIn: checkedIn.length,
+        cleaning: cleaningRooms.length
       }
     });
   } catch (err) {
@@ -103,13 +109,15 @@ router.get('/admin', authenticateUser, authorizeRoles('admin'), async (req, res)
       totalRooms,
       availableRooms,
       occupiedRooms,
+      cleaningRooms,
       totalBookings,
       paidBookings,
       recentBookings
     ] = await Promise.all([
       Room.countDocuments(),
       Room.countDocuments({ status: 'available' }),
-      Booking.countDocuments({ bookingStatus: 'checked-in' }),
+      Room.countDocuments({ status: 'occupied' }),
+      Room.countDocuments({ status: 'cleaning' }),
       Booking.countDocuments({ bookingStatus: { $ne: 'cancelled' } }),
       Booking.find({ paymentStatus: 'paid' }).select('totalAmount'),
       Booking.find()
@@ -128,6 +136,7 @@ router.get('/admin', authenticateUser, authorizeRoles('admin'), async (req, res)
       totalRooms,
       availableRooms,
       occupiedRooms,
+      cleaningRooms,
       totalBookings,
       totalRevenue,
       occupancyPercent,

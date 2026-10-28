@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { formatINR } from '../utils/formatCurrency';
 
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : '—';
@@ -128,14 +129,14 @@ const InvoiceModal = ({ isOpen, onClose, booking, payment, guestName }) => {
                   <tr>
                     <td>Nightly Rate — {room.title || 'Suite'}</td>
                     <td className="text-end">{nights} night{nights !== 1 ? 's' : ''}</td>
-                    <td className="text-end">₹{nightlyPrice.toLocaleString('en-IN')}</td>
-                    <td className="text-end">₹{(nightlyPrice * nights).toLocaleString('en-IN')}</td>
+                    <td className="text-end">{formatINR(nightlyPrice, true)}</td>
+                    <td className="text-end">{formatINR(nightlyPrice * nights, true)}</td>
                   </tr>
                 </tbody>
                 <tfoot>
                   <tr>
                     <td colSpan="3" className="text-end fw-bold">Total</td>
-                    <td className="text-end fw-bold fs-5">₹{totalAmount.toLocaleString('en-IN')}</td>
+                    <td className="text-end fw-bold fs-5">{formatINR(totalAmount, true)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -164,9 +165,13 @@ const InvoiceModal = ({ isOpen, onClose, booking, payment, guestName }) => {
                   <div className="text-muted small mt-2">
                     <i className="bi bi-check-circle-fill text-success me-1"></i>
                     Paid on {formatDate(payment.paidAt)}
-                    {payment.provider === 'demo' && (
+                    {payment.provider === 'demo' ? (
                       <span className="badge bg-secondary-subtle text-secondary border ms-2 fw-normal" style={{ fontSize: '0.7rem' }}>
                         DEMO PAYMENT
+                      </span>
+                    ) : (
+                      <span className="badge bg-primary-subtle text-primary border ms-2 fw-normal" style={{ fontSize: '0.7rem' }}>
+                        <i className="bi bi-shield-check me-1"></i>RAZORPAY VERIFIED
                       </span>
                     )}
                   </div>

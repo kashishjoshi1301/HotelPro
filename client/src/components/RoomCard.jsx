@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatINR } from '../utils/formatCurrency';
 
 const RoomCard = ({ room, onSelectRoom }) => {
   const formattedCapacity = typeof room.capacity === 'number' ? `${room.capacity} Guests` : (room.capacity || '2 Guests');
@@ -47,7 +48,7 @@ const RoomCard = ({ room, onSelectRoom }) => {
 
           <div className="pt-3 border-top d-flex align-items-center justify-content-between mt-auto">
             <div>
-              <span className="room-price-tag">${room.price}</span>
+              <span className="room-price-tag">{formatINR(room.price)}</span>
               <span className="text-muted small"> / night</span>
             </div>
             <button

@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { getGuestDashboard } from '../api/dashboard';
-import { processDemoPayment } from '../api/payments';
+import { createRazorpayOrder, verifyRazorpayPayment, processDemoPayment } from '../api/payments';
 import InvoiceModal from './InvoiceModal';
 import { STATUS_BADGE, formatDate } from './BookingModal';
 import { useAuth } from '../context/AuthContext';
+import { formatINR } from '../utils/formatCurrency';
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const GuestDashboard = ({ isOpen, onClose }) => {
   const { user } = useAuth();
@@ -12,6 +24,7 @@ const GuestDashboard = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [payingId, setPayingId] = useState(null);
   const [payError, setPayError] = useState('');
+  const [paySuccess, setPaySuccess] = useState('');
   const [invoice, setInvoice] = useState({ open: false, booking: null, payment: null });
 
   const load = () => {
@@ -27,15 +40,74 @@ const GuestDashboard = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const handlePay = async (bookingId) => {
-    setPayingId(bookingId);
+  const handlePay = async (booking) => {
+    if (payingId) return;
+    setPayingId(booking._id);
     setPayError('');
+    setPaySuccess('');
+
     try {
-      await processDemoPayment(bookingId);
-      load(); // refresh
+      const { data: orderRes } = await createRazorpayOrder(booking._id);
+
+      // If Razorpay live/test credentials are fully configured on server
+      if (orderRes.keyId) {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          throw new Error('Razorpay Checkout SDK failed to load. Please check your network connection.');
+        }
+
+        const options = {
+          key: orderRes.keyId,
+          amount: orderRes.amount,
+          currency: orderRes.currency || 'INR',
+          name: 'HotelPro Luxury Resort',
+          description: `Reservation #${booking._id.slice(-8).toUpperCase()} — ${booking.room?.title || 'Suite'}`,
+          order_id: orderRes.orderId,
+          handler: async (response) => {
+            try {
+              await verifyRazorpayPayment({
+                bookingId: booking._id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature
+              });
+              setPaySuccess(`Payment verified! Transaction ID: ${response.razorpay_payment_id}`);
+              load();
+            } catch (vErr) {
+              setPayError(vErr.response?.data?.error || 'Payment signature verification failed.');
+            } finally {
+              setPayingId(null);
+            }
+          },
+          prefill: {
+            name: user?.name || '',
+            email: user?.email || ''
+          },
+          theme: {
+            color: '#c5a880'
+          },
+          modal: {
+            ondismiss: () => {
+              setPayingId(null);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (response) => {
+          setPayError(response.error?.description || 'Payment failed or was cancelled by the user.');
+          setPayingId(null);
+        });
+        rzp.open();
+      } else if (orderRes.mockOrder) {
+        // Fallback to demo payment when Razorpay keys are not yet inserted in dev
+        await processDemoPayment(booking._id);
+        setPaySuccess('Payment processed in test mode. (Razorpay keys not yet configured in server/.env)');
+        load();
+        setPayingId(null);
+      }
     } catch (e) {
-      setPayError(e.response?.data?.error || 'Payment failed. Please try again.');
-    } finally {
+      setPayError(e.response?.data?.error || e.message || 'Failed to initiate payment.');
       setPayingId(null);
     }
   };
@@ -78,6 +150,13 @@ const GuestDashboard = ({ isOpen, onClose }) => {
               {!loading && error && (
                 <div className="alert alert-danger small py-2 px-3">
                   <i className="bi bi-exclamation-triangle me-1"></i>{error}
+                </div>
+              )}
+
+              {paySuccess && (
+                <div className="alert alert-success small py-2 px-3 mb-3 d-flex align-items-center gap-2">
+                  <i className="bi bi-check-circle-fill flex-shrink-0"></i>
+                  <span>{paySuccess}</span>
                 </div>
               )}
 
@@ -154,7 +233,7 @@ const GuestDashboard = ({ isOpen, onClose }) => {
                                     <div>{formatDate(b.checkIn)}</div>
                                     <div className="text-muted">to {formatDate(b.checkOut)}</div>
                                   </td>
-                                  <td className="fw-semibold">₹{b.totalAmount?.toLocaleString('en-IN')}</td>
+                                  <td className="fw-semibold">{formatINR(b.totalAmount)}</td>
                                   <td>
                                     <span className={`badge ${STATUS_BADGE[b.bookingStatus] || 'bg-secondary-subtle text-secondary'}`}>
                                       {b.bookingStatus}
@@ -171,13 +250,13 @@ const GuestDashboard = ({ isOpen, onClose }) => {
                                         <button
                                           className="btn btn-hotelpro-gold btn-sm px-2 py-1"
                                           style={{ fontSize: '0.75rem' }}
-                                          onClick={() => handlePay(b._id)}
+                                          onClick={() => handlePay(b)}
                                           disabled={payingId === b._id}
-                                          title="Demo Payment only"
+                                          title="Pay securely via Razorpay"
                                         >
                                           {payingId === b._id
                                             ? <span className="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                                            : <><i className="bi bi-credit-card me-1"></i>Pay (Demo)</>
+                                            : <><i className="bi bi-shield-check me-1"></i>Pay Now</>
                                           }
                                         </button>
                                       )}

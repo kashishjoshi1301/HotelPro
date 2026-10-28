@@ -6,13 +6,13 @@ const paymentSchema = new mongoose.Schema(
     booking: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Booking',
-      required: [true, 'Booking reference is required'],
-      index: true
+      required: [true, 'Booking reference is required']
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'User reference is required']
+      required: [true, 'User reference is required'],
+      index: true
     },
     amount: {
       type: Number,
@@ -27,7 +27,28 @@ const paymentSchema = new mongoose.Schema(
     },
     provider: {
       type: String,
-      default: 'demo',
+      enum: ['razorpay', 'demo'],
+      default: 'razorpay',
+      trim: true
+    },
+    orderId: {
+      type: String,
+      trim: true,
+      sparse: true,
+      index: true
+    },
+    paymentId: {
+      type: String,
+      trim: true,
+      sparse: true,
+      index: true
+    },
+    signature: {
+      type: String,
+      trim: true
+    },
+    receipt: {
+      type: String,
       trim: true
     },
     transactionId: {
@@ -47,6 +68,12 @@ const paymentSchema = new mongoose.Schema(
     }
   },
   { timestamps: true }
+);
+
+// Database-level guarantee: Only one payment with status 'paid' can exist per booking
+paymentSchema.index(
+  { booking: 1 },
+  { unique: true, partialFilterExpression: { status: 'paid' } }
 );
 
 // Generate a unique demo transaction ID
